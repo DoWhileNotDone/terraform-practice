@@ -61,36 +61,8 @@ resource "aws_security_group" "web" {
     }
 }
 
-resource "aws_instance" "web" {
-  count         = 2
-
-  ami           = "ami-0c52c335f3334c594"
-  instance_type = "t2.nano"
-
-  vpc_security_group_ids = [
-    aws_security_group.web.id
-  ] 
-
-  tags = {
-    "Name"      = "DavegExampleAppServerInstance"
-    "Terraform" = "true"
-  }
-}
-
-resource "aws_eip_association" "web" {
-    instance_id   = aws_instance.web[0].id
-    allocation_id = aws_eip.web.id
-}
-
-resource "aws_eip" "web" {
-    tags =  {
-        "Terraform" = "true"
-    }
-}
-
 resource "aws_elb" "web" {
     name      = "web"
-    instances = aws_instance.web[*].id
 
     subnets = [
         aws_default_subnet.default_az1.id,
@@ -111,4 +83,37 @@ resource "aws_elb" "web" {
     tags =  {
         "Terraform" = "true"
     }
+}
+
+resource "aws_launch_template" "web" {
+    name_prefix   = "web"
+    image_id      = "ami-0c52c335f3334c594"
+    instance_type = "t2.nano"
+}
+
+resource "aws_autoscaling_group" "web" {
+    vpc_zone_identifier = [
+        aws_default_subnet.default_az1.id,
+        aws_default_subnet.default_az2.id,
+    ]
+
+    desired_capacity   = 1
+    max_size           = 1
+    min_size           = 1
+
+    launch_template {
+        id      = aws_launch_template.web.id
+        version = "$Latest"
+    }
+
+    tag {
+       key                 = "Terraform" 
+       value               = "true"
+       propagate_at_launch = true
+    }
+}
+
+resource "aws_autoscaling_attachment" "asg_attachment_bar" {
+    autoscaling_group_name = aws_autoscaling_group.web.id
+    elb                    = aws_elb.web.id
 }
