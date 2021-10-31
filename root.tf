@@ -33,27 +33,21 @@ resource "aws_security_group" "web" {
         from_port   = 80
         to_port     = 80
         protocol    = "tcp"
-        cidr_blocks = [
-            "0.0.0.0/0"
-        ]
+        cidr_blocks = var.whitelist
     }
 
     ingress {
         from_port   = 443
         to_port     = 443
         protocol    = "tcp"
-        cidr_blocks = [
-            "0.0.0.0/0"
-        ]        
+        cidr_blocks = var.whitelist
     }
 
     egress {
         from_port   = 0
         to_port     = 0
         protocol    = "-1"
-        cidr_blocks = [
-            "0.0.0.0/0"
-        ]        
+        cidr_blocks = var.whitelist
     }
 
     tags =  {
@@ -62,7 +56,7 @@ resource "aws_security_group" "web" {
 }
 
 resource "aws_elb" "web" {
-    name      = "web"
+    name    = "web"
 
     subnets = [
         aws_default_subnet.default_az1.id,
@@ -87,8 +81,8 @@ resource "aws_elb" "web" {
 
 resource "aws_launch_template" "web" {
     name_prefix   = "web"
-    image_id      = "ami-0c52c335f3334c594"
-    instance_type = "t2.nano"
+    image_id      = var.web_image_id
+    instance_type = var.web_instance_type
 }
 
 resource "aws_autoscaling_group" "web" {
@@ -97,9 +91,9 @@ resource "aws_autoscaling_group" "web" {
         aws_default_subnet.default_az2.id,
     ]
 
-    desired_capacity   = 1
-    max_size           = 1
-    min_size           = 1
+    desired_capacity   = var.web_desired_capacity
+    max_size           = var.web_max_size
+    min_size           = var.web_min_size
 
     launch_template {
         id      = aws_launch_template.web.id
